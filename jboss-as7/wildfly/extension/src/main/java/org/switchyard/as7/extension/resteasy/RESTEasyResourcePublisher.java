@@ -25,12 +25,14 @@ import org.jboss.as.web.host.WebDeploymentBuilder;
 import org.jboss.as.web.host.WebDeploymentController;
 import org.jboss.as.web.host.WebHost;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.plugins.server.servlet.ResteasyContextParameters;
 import org.switchyard.ServiceDomain;
 import org.switchyard.as7.extension.ExtensionMessages;
 import org.switchyard.as7.extension.WebResource;
 import org.switchyard.as7.extension.deployment.SwitchYardDeployment;
 import org.switchyard.as7.extension.util.ServerUtil;
 import org.switchyard.component.common.Endpoint;
+import org.switchyard.component.resteasy.DefaultExceptionMapper;
 import org.switchyard.component.resteasy.resource.ResourcePublisher;
 
 /**
@@ -74,11 +76,20 @@ public class RESTEasyResourcePublisher implements ResourcePublisher {
                 servletBuilder.setServletClass(RESTEasyServlet.class);
                 servletBuilder.setForceInit(true);
                 servletBuilder.addInitParam("resteasy.servlet.context.deployment", "true");
+
+                String providers = DefaultExceptionMapper.class.getCanonicalName();
                 if (contextParams != null) {
                     for (Map.Entry<String, String> cp : contextParams.entrySet()) {
-                        servletBuilder.addInitParam(cp.getKey(), cp.getValue());
+                        if (!cp.getKey().equals(ResteasyContextParameters.RESTEASY_PROVIDERS)) {
+                            servletBuilder.addInitParam(cp.getKey(), cp.getValue());
+                        } else {
+                            providers += "," + cp.getValue();
+                        }
                     }
                 }
+                // Register @Provider classes
+                servletBuilder.addInitParam(ResteasyContextParameters.RESTEASY_PROVIDERS, providers);
+
                 servletBuilder.setServlet(servlet);
                 deployment.addServlet(servletBuilder);
 

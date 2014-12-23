@@ -14,14 +14,12 @@
  
 package org.switchyard.as7.extension.resteasy;
 
-import java.lang.reflect.InvocationTargetException;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
-
 import java.util.Map;
 import javax.naming.NamingException;
-
 import org.apache.catalina.Host;
 import org.apache.catalina.Loader;
 import org.apache.catalina.Wrapper;
@@ -31,11 +29,13 @@ import org.apache.tomcat.InstanceManager;
 import org.jboss.as.server.ServerEnvironment;
 import org.jboss.as.web.deployment.WebCtxLoader;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.plugins.server.servlet.ResteasyContextParameters;
 import org.jboss.resteasy.spi.Registry;
 import org.switchyard.ServiceDomain;
 import org.switchyard.as7.extension.ExtensionMessages;
 import org.switchyard.as7.extension.util.ServerUtil;
 import org.switchyard.component.common.Endpoint;
+import org.switchyard.component.resteasy.DefaultExceptionMapper;
 import org.switchyard.component.resteasy.resource.ResourcePublisher;
 
 /**
@@ -82,11 +82,18 @@ public class RESTEasyResourcePublisher implements ResourcePublisher {
             serverContext.addServletMapping("/*", SERVLET_NAME);
             serverContext.addApplicationListener(LISTENER_CLASS);
 
+            String providers = DefaultExceptionMapper.class.getCanonicalName();
             if (contextParams != null) {
                 for (Map.Entry<String, String> cp : contextParams.entrySet()) {
-                    serverContext.addParameter(cp.getKey(), cp.getValue());
+                    if (!cp.getKey().equals(ResteasyContextParameters.RESTEASY_PROVIDERS)) {
+                        serverContext.addParameter(cp.getKey(), cp.getValue());
+                    } else {
+                        providers += "," + cp.getValue();
+                    }
                 }
             }
+            // Register @Provider classes
+            serverContext.addParameter(ResteasyContextParameters.RESTEASY_PROVIDERS, providers);
 
             host.addChild(serverContext);
             serverContext.create();
